@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises';
-import path from 'node:path';
+import { dirname, join } from 'node:path';
 import http from 'node:http';
 const PUERTO = 3000;
-let rutaIndex = path.join('public');
+let rutaIndex = join('public');
 /* const gestionarRecursos = (req,res)=>{
     const ruta = path.join(rutaIndex,req.url);
     fs.readFile(ruta, (err,data)=>{
@@ -30,11 +30,21 @@ let rutaIndex = path.join('public');
         }
     })
 } */
+async function fetchData() {
+    try {
+        const response = await fetch('http://localhost:3000/productos');
+        const data = await response.json();
+        console.log(data);
+    } catch (error) {
+        console.error('Error al recuperar datos:', error);
+    }
+}
+fetchData();
 const gestionarIndex = async (res)=>{
-    const ruta = path.join(rutaIndex,'index.html');
+    const ruta = join(rutaIndex,'index.html');
     let data;
     try{
-        data = await fs.readFile(ruta, 'utf-8')
+        data = await fs.readFile(ruta)
     }catch(err){
         throw err;
     }
@@ -44,17 +54,16 @@ const gestionarIndex = async (res)=>{
 
 
 const gestionarRecursos = async (req,res)=>{
-    const ruta = path.join(rutaIndex,req.url);
-    console.log(ruta)
+    const ruta = join(rutaIndex,req.url);
+
     let data;
     try{
-        data = await fs.readFile(ruta, 'utf-8');
+        data = await fs.readFile(ruta);
         res.end(data);
     }catch(err){
         throw err
     }
 }
-
 
 
 
@@ -71,5 +80,6 @@ const miServidor = http.createServer((req,res)=>{
         res.end("No se encuntra el recurso");
     }
 })
+
 
 miServidor.listen(PUERTO);
