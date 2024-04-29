@@ -1,9 +1,17 @@
 import fs from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname, join, extname } from 'node:path';
 import {createServer} from 'node:http';
+import { readFile } from 'node:fs/promises';
 const PUERTO = 3000;
-const rutaIndex = join('public');
-const PRODUCTOS = join('json');
+const rutaIndex = 'public'
+const PRODUCTOS = 'json';
+const mime = {
+    '.jpeg': 'image/jpeg',
+    '.jpg': 'image/jpg',
+    '.json': 'application/json',
+    '.css': 'text/css',
+    '.js': 'application/javascript'
+}
 /* const gestionarRecursos = (req,res)=>{
     const ruta = path.join(rutaIndex,req.url);
     fs.readFile(ruta, (err,data)=>{
@@ -31,10 +39,7 @@ const PRODUCTOS = join('json');
         }
     })
 } */
-async function fetchData() {
-   
-}
-fetchData();
+
 const gestionarIndex = async (res)=>{
     const ruta = join(rutaIndex,'index.html');
     let data;
@@ -50,11 +55,14 @@ const gestionarIndex = async (res)=>{
 
 const gestionarRecursos = async (req,res)=>{
          const ruta = join(rutaIndex,req.url);
+         const extension = mime[extension]
+         const mime = mime[extension]
         let data;
         try{
             data = await fs.readFile(ruta);
             res.end(data);
         }catch(err){
+
             throw err
         }
    
@@ -62,9 +70,10 @@ const gestionarRecursos = async (req,res)=>{
 const gestionarProductos = async ()=>{
      try {
         const ruta = join(PRODUCTOS, 'productos.json');
-        const response = await fetch(ruta);
-        const data = await response.json();
-        console.log(data);
+        const datos = await readFile(ruta, 'utf-8');
+        console.log(datos);
+        res.statusCode =200;
+        res.end(datos);
     } catch (error) {
         console.error('Error al recuperar datos:', error);
     }
@@ -82,7 +91,31 @@ const miServidor =  createServer ((req,res)=>{
         else{
             gestionarRecursos();
         }
-    }else{
+    }else if(req.method === 'POST'){
+        if(req.url=== '/procesar-formulario'){
+            let datosFormulario = '';
+            //llegando, cuando estoy recibiendo datos
+            req.on('data', (pedacitos)=>{
+                datosFormulario += pedacitos
+            })
+            //hay un error
+            req.on('error', (error)=>{
+                console.error(error);
+                req.statusCode = 500;
+                res.end("recurs no encontrado")
+            })
+            //ya llego todo
+            req.on('end',()=>{
+                console.log(datosFormulario);
+                res.end(datosFormulario);
+            })
+
+
+        }else{
+            gestionarRecursos(req, res)
+        }
+    } 
+    else{
         res.statusCode= 404;
         res.end("No se encuntra el recurso");
     }
