@@ -1,11 +1,11 @@
 import fs from 'node:fs/promises';
-import { dirname, join, extname } from 'node:path';
+import { join, extname } from 'node:path';
 import {createServer} from 'node:http';
 import { readFile } from 'node:fs/promises';
 const PUERTO = 3000;
 const rutaIndex = 'public'
 const PRODUCTOS = 'json';
-const mime = {
+const mimeDiccionario = {
     '.jpeg': 'image/jpeg',
     '.jpg': 'image/jpg',
     '.json': 'application/json',
@@ -45,36 +45,52 @@ const gestionarIndex = async (res)=>{
     let data;
     try{
         data = await fs.readFile(ruta)
+        res.setHeader('Cache-Control','max-age=3600')
+        res.setHeader('Content-Type','text/html;charset=utf-8')
+        res.end(data);
     }catch(err){
+        res.statusCode = 500;
+        res.setHeader('Content-Type','text/plain;charset=utf-8')
+        res.end('Hubo un error en el servidor')
         throw err;
     }
-    res.end(data);
+   
     return
 } 
 
 
 const gestionarRecursos = async (req,res)=>{
-         const ruta = join(rutaIndex,req.url);
-         const extension = mime[extension]
-         const mime = mime[extension]
+        const ruta = join(rutaIndex,req.url);
         let data;
         try{
             data = await fs.readFile(ruta);
+            const extension = extname(ruta)
+            const mime = mimeDiccionario[extension]
+
+            res.writeHead(200,{
+                'Content-Type':mime,
+                'Cache-Control':'max-age=3600'
+            })
             res.end(data);
         }catch(err){
-
-            throw err
+            res.setHeader('Content-Type','text/plain;charset=utf-8')
+            res.statusCode = 404;
+            res.end('recurso no encontrado')
         }
    
 }
-const gestionarProductos = async ()=>{
+const gestionarProductos = async (res)=>{
      try {
         const ruta = join(PRODUCTOS, 'productos.json');
         const datos = await readFile(ruta, 'utf-8');
-        console.log(datos);
-        res.statusCode =200;
-        res.end(datos);
+        res.setHeader('Cache-Control','max-age=3600')
+        res.setHeader('Content-Type','application/json;charset=utf-8')
+        res.statusCode = 200;
+        res.end(datos)
     } catch (error) {
+        res.setHeader('Content-Type','text/plain;charset=utf-8')
+        res.statusCode = 404;
+        res.end('recurso no encontrado')
         console.error('Error al recuperar datos:', error);
     }
 }
@@ -86,10 +102,10 @@ const miServidor =  createServer ((req,res)=>{
         if(req.url === '/' || req.url === '/index.html'){
             gestionarIndex(res);
         }else if(req.url === '/productos'){
-             gestionarProductos();
+             gestionarProductos(res);
         }
         else{
-            gestionarRecursos();
+            gestionarRecursos(req,res);
         }
     }else if(req.method === 'POST'){
         if(req.url=== '/procesar-formulario'){
